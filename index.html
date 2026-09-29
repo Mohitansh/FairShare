@@ -21,13 +21,15 @@
 
     <!-- Header -->
     <header class="bg-teal-700 text-white shadow-md">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center space-x-2">
                 <span class="text-2xl font-black tracking-wider">⚖️ FairShare</span>
                 <span class="text-xs bg-teal-800 px-2 py-0.5 rounded-full uppercase tracking-widest font-semibold text-teal-200">Offline PWA</span>
             </div>
-            <div class="text-sm font-medium bg-teal-800 px-3 py-1 rounded-lg">
-                Trip: <span x-text="tripName" class="font-bold underline cursor-pointer" @click="renameTrip"></span>
+            <div class="flex items-center gap-3 text-sm">
+                <div class="font-medium bg-teal-800 px-3 py-1 rounded-lg">
+                    Trip: <span x-text="tripName" class="font-bold underline cursor-pointer" @click="renameTrip"></span>
+                </div>
             </div>
         </div>
     </header>
@@ -85,11 +87,26 @@
         <div class="md:col-span-2 space-y-6">
             <!-- Settlements / Who Owes Whom -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">Fair Settlement Overview</h2>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Fair Settlement Overview</h2>
+                    
+                    <!-- Settlement Currency Selector -->
+                    <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                        <span class="text-xs text-slate-500 font-semibold pl-1">Settle in:</span>
+                        <select x-model="baseCurrency" class="text-xs font-bold bg-transparent text-teal-700 focus:outline-none cursor-pointer">
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="INR">INR (₹)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="JPY">JPY (¥)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <template x-if="settlements.length === 0">
                     <p class="text-sm text-slate-400 italic">No splits yet. Add members and expenses to view automated clear balances.</p>
                 </template>
-                <div class="space-y-2">
+                <div class="space-y-2 mb-4">
                     <template x-for="s in settlements">
                         <div class="flex justify-between items-center p-3 bg-teal-50/50 border border-teal-100 rounded-xl text-sm">
                             <div>
@@ -100,6 +117,13 @@
                         </div>
                     </template>
                 </div>
+
+                <!-- Share Report WhatsApp Button -->
+                <template x-if="settlements.length > 0">
+                    <button @click="shareOnWhatsApp" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm">
+                        <span>💬 Share Report on WhatsApp</span>
+                    </button>
+                </template>
             </div>
 
             <!-- Expense History -->
@@ -127,6 +151,12 @@
 
     </main>
 
+    <!-- Footer Signature -->
+    <footer class="mt-auto py-6 text-center text-xs text-slate-400 border-t border-slate-100 bg-white w-full">
+        <p>© 2026 Ansh Raghav (MOHITANSH). All Rights Reserved.</p>
+        <p class="mt-1 text-slate-300">FairShare — Global Utility PWA</p>
+    </footer>
+
     <!-- Script Logic -->
     <script>
         function fairShare() {
@@ -134,7 +164,7 @@
                 tripName: localStorage.getItem('fs_trip') || 'Global Expedition',
                 members: JSON.parse(localStorage.getItem('fs_members') || '["Ansh", "Traveler"]'),
                 expenses: JSON.parse(localStorage.getItem('fs_expenses') || '[]'),
-                baseCurrency: 'USD',
+                baseCurrency: localStorage.getItem('fs_baseCurr') || 'USD',
                 newMember: '',
                 expense: { title: '', amount: '', currency: 'USD', paidBy: '' },
                 
@@ -142,6 +172,7 @@
                     this.$watch('members', val => localStorage.setItem('fs_members', JSON.stringify(val)));
                     this.$watch('expenses', val => localStorage.setItem('fs_expenses', JSON.stringify(val)));
                     this.$watch('tripName', val => localStorage.setItem('fs_trip', val));
+                    this.$watch('baseCurrency', val => localStorage.setItem('fs_baseCurr', val));
                 },
 
                 renameTrip() {
@@ -174,16 +205,22 @@
                     this.expenses.splice(index, 1);
                 },
 
+                // Base conversion rates relative to USD
+                get conversionRates() {
+                    return { USD: 1, EUR: 0.92, INR: 83.5, GBP: 0.79, JPY: 155.0 };
+                },
+
                 get settlements() {
                     if (this.members.length === 0 || this.expenses.length === 0) return [];
                     
                     let balances = {};
                     this.members.forEach(m => balances[m] = 0);
 
-                    let rates = { USD: 1, EUR: 1.08, INR: 0.012, GBP: 1.27, JPY: 0.0065 };
+                    let ratesToUSD = { USD: 1, EUR: 1.08, INR: 0.012, GBP: 1.27, JPY: 0.0065 };
 
+                    // Calculate balances in USD standard base
                     this.expenses.forEach(item => {
-                        let rate = rates[item.currency] || 1;
+                        let rate = ratesToUSD[item.currency] || 1;
                         let amountInUSD = item.amount * rate;
                         let splitShare = amountInUSD / this.members.length;
 
@@ -196,10 +233,14 @@
                         });
                     });
 
+                    // Convert USD balances to user's selected base currency
+                    let targetRateFromUSD = this.conversionRates[this.baseCurrency] || 1;
+
                     let debtors = [];
                     let creditors = [];
                     Object.keys(balances).forEach(m => {
-                        let bal = Math.round(balances[m] * 100) / 100;
+                        let balInTarget = balances[m] * targetRateFromUSD;
+                        let bal = Math.round(balInTarget * 100) / 100;
                         if (bal < -0.01) debtors.push({ name: m, amount: -bal });
                         if (bal > 0.01) creditors.push({ name: m, amount: bal });
                     });
@@ -225,14 +266,27 @@
                     }
 
                     return results;
+                },
+
+                shareOnWhatsApp() {
+                    let text = `⚖️ *FairShare Report: ${this.tripName}*\n\n`;
+                    text += `👥 *Crew:* ${this.members.join(', ')}\n\n`;
+                    text += `💸 *Settlements (${this.baseCurrency}):*\n`;
+                    
+                    if (this.settlements.length === 0) {
+                        text += `No pending balances.\n`;
+                    } else {
+                        this.settlements.forEach(s => {
+                            text += `• ${s.from} ➔ ${s.to}: *${s.amount} ${this.baseCurrency}*\n`;
+                        });
+                    }
+
+                    text += `\n_Generated via FairShare PWA_`;
+                    let encoded = encodeURIComponent(text);
+                    window.open(`https://wa.me/?text=${encoded}`, '_blank');
                 }
             }
         }
     </script>
-        <!-- Footer Signature -->
-    <footer class="mt-auto py-6 text-center text-xs text-slate-400 border-t border-slate-100 bg-white">
-        <p>© 2026 Ansh Raghav (MOHITANSH). All Rights Reserved.</p>
-        <p class="mt-1 text-slate-300">FairShare — Global Utility PWA</p>
-    </footer>
 </body>
 </html>
