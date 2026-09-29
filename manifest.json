@@ -1,0 +1,15 @@
+{
+  "name": "FairShare Global Splitter",
+  "short_name": "FairShare",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "icons": [
+    {
+      "src": "1790677543176.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

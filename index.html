@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FairShare — Zero-Login Global Expense & Currency Splitter</title>
+    
+    <!-- App Logo / Favicon -->
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js for reactive UI -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d9488">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col" x-data="fairShare()">
+
+    <!-- Header -->
+    <header class="bg-teal-700 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl font-black tracking-wider">⚖️ FairShare</span>
+                <span class="text-xs bg-teal-800 px-2 py-0.5 rounded-full uppercase tracking-widest font-semibold text-teal-200">Offline PWA</span>
+            </div>
+            <div class="text-sm font-medium bg-teal-800 px-3 py-1 rounded-lg">
+                Trip: <span x-text="tripName" class="font-bold underline cursor-pointer" @click="renameTrip"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Left Column: Controls & Add Form -->
+        <div class="space-y-6">
+            <!-- Add Participants Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">1. Crew / Members</h2>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" x-model="newMember" @keyup.enter="addMember" placeholder="Add name..." class="flex-grow px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <button @click="addMember" class="bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">Add</button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="member in members" :key="member">
+                        <span class="bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                            <span x-text="member"></span>
+                            <button @click="removeMember(member)" class="text-slate-400 hover:text-red-500 font-bold ml-1">×</button>
+                        </span>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Add Expense Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">2. Add Expense</h2>
+                <div class="space-y-3">
+                    <input type="text" x-model="expense.title" placeholder="Description (e.g. Hotel, Cab)" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <div class="flex gap-2">
+                        <input type="number" x-model.number="expense.amount" placeholder="Amount" class="w-2/3 px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <select x-model="expense.currency" class="w-1/3 px-2 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="INR">INR (₹)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="JPY">JPY (¥)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 font-medium">Paid by:</label>
+                        <select x-model="expense.paidBy" class="w-full mt-1 px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">Select member</option>
+                            <template x-for="m in members" :key="m"><option :value="m" x-text="m"></option></template>
+                        </select>
+                    </div>
+                    <button @click="addExpense" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition shadow-sm">Save Expense Safely</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Summary & Balances -->
+        <div class="md:col-span-2 space-y-6">
+            <!-- Settlements / Who Owes Whom -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">Fair Settlement Overview</h2>
+                <template x-if="settlements.length === 0">
+                    <p class="text-sm text-slate-400 italic">No splits yet. Add members and expenses to view automated clear balances.</p>
+                </template>
+                <div class="space-y-2">
+                    <template x-for="s in settlements">
+                        <div class="flex justify-between items-center p-3 bg-teal-50/50 border border-teal-100 rounded-xl text-sm">
+                            <div>
+                                <span class="font-semibold text-teal-900" x-text="s.from"></span> pays 
+                                <span class="font-semibold text-teal-900" x-text="s.to"></span>
+                            </div>
+                            <span class="font-bold text-teal-700" x-text="s.amount + ' ' + baseCurrency"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Expense History -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">Secure Local Ledger</h2>
+                <div class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                    <template x-if="expenses.length === 0">
+                        <p class="text-sm text-slate-400 italic py-2">No transactions recorded on local device.</p>
+                    </template>
+                    <template x-for="(item, index) in expenses" :key="index">
+                        <div class="py-3 flex justify-between items-center text-sm">
+                            <div>
+                                <p class="font-semibold text-slate-700" x-text="item.title"></p>
+                                <p class="text-xs text-slate-400">Paid by <span class="font-medium text-slate-600" x-text="item.paidBy"></span></p>
+                            </div>
+                            <div class="text-right flex items-center gap-3">
+                                <span class="font-bold text-slate-800" x-text="item.amount + ' ' + item.currency"></span>
+                                <button @click="removeExpense(index)" class="text-slate-300 hover:text-red-500 font-bold">×</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script Logic -->
+    <script>
+        function fairShare() {
+            return {
+                tripName: localStorage.getItem('fs_trip') || 'Global Expedition',
+                members: JSON.parse(localStorage.getItem('fs_members') || '["Ansh", "Traveler"]'),
+                expenses: JSON.parse(localStorage.getItem('fs_expenses') || '[]'),
+                baseCurrency: 'USD',
+                newMember: '',
+                expense: { title: '', amount: '', currency: 'USD', paidBy: '' },
+                
+                init() {
+                    this.$watch('members', val => localStorage.setItem('fs_members', JSON.stringify(val)));
+                    this.$watch('expenses', val => localStorage.setItem('fs_expenses', JSON.stringify(val)));
+                    this.$watch('tripName', val => localStorage.setItem('fs_trip', val));
+                },
+
+                renameTrip() {
+                    let name = prompt("Enter trip or group name:", this.tripName);
+                    if (name) this.tripName = name;
+                },
+
+                addMember() {
+                    if (this.newMember.trim() && !this.members.includes(this.newMember.trim())) {
+                        this.members.push(this.newMember.trim());
+                        this.newMember = '';
+                    }
+                },
+
+                removeMember(name) {
+                    this.members = this.members.filter(m => m !== name);
+                },
+
+                addExpense() {
+                    if (!this.expense.title || !this.expense.amount || !this.expense.paidBy) {
+                        alert("Please fill all fields to maintain fair tracking.");
+                        return;
+                    }
+                    this.expenses.push({ ...this.expense });
+                    this.expense.title = '';
+                    this.expense.amount = '';
+                },
+
+                removeExpense(index) {
+                    this.expenses.splice(index, 1);
+                },
+
+                get settlements() {
+                    if (this.members.length === 0 || this.expenses.length === 0) return [];
+                    
+                    let balances = {};
+                    this.members.forEach(m => balances[m] = 0);
+
+                    let rates = { USD: 1, EUR: 1.08, INR: 0.012, GBP: 1.27, JPY: 0.0065 };
+
+                    this.expenses.forEach(item => {
+                        let rate = rates[item.currency] || 1;
+                        let amountInUSD = item.amount * rate;
+                        let splitShare = amountInUSD / this.members.length;
+
+                        if (balances[item.paidBy] !== undefined) {
+                            balances[item.paidBy] += amountInUSD;
+                        }
+
+                        this.members.forEach(m => {
+                            balances[m] -= splitShare;
+                        });
+                    });
+
+                    let debtors = [];
+                    let creditors = [];
+                    Object.keys(balances).forEach(m => {
+                        let bal = Math.round(balances[m] * 100) / 100;
+                        if (bal < -0.01) debtors.push({ name: m, amount: -bal });
+                        if (bal > 0.01) creditors.push({ name: m, amount: bal });
+                    });
+
+                    let results = [];
+                    let i = 0, j = 0;
+                    while (i < debtors.length && j < creditors.length) {
+                        let debt = debtors[i];
+                        let credit = creditors[j];
+                        let settledAmount = Math.min(debt.amount, credit.amount);
+                        
+                        results.push({
+                            from: debt.name,
+                            to: credit.name,
+                            amount: settledAmount.toFixed(2)
+                        });
+
+                        debt.amount -= settledAmount;
+                        credit.amount -= settledAmount;
+
+                        if (debt.amount < 0.01) i++;
+                        if (credit.amount < 0.01) j++;
+                    }
+
+                    return results;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
