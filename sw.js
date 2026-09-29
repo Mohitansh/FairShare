@@ -1,12 +1,15 @@
+const CACHE_NAME = 'fairshare-v2';
+const urlsToCache = [
+  './',
+  './index.html',
+  './manifest.json',
+  './1790677543176.png'
+];
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.useCache?.then || caches.open('fairshare-v1').then((cache) => {
-      return cache.addAll([
-        './',
-        './index.html',
-        './manifest.json',
-        './1790677543176.png'
-      ]);
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(urlsToCache);
     })
   );
 });
