@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FairShare — Zero-Login Global Expense & Currency Splitter</title>
     
+    <!-- Google Search Console Verification Meta Tag -->
+    <meta name="google-site-verification" content="YAHAN_APNA_GSC_CODE_DAALEIN">
+
     <!-- App Logo / Favicon -->
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="1790677543176.png">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -81,6 +84,16 @@
                     <button @click="addExpense" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition shadow-sm">Save Expense Safely</button>
                 </div>
             </div>
+
+            <!-- Quick Action Buttons (Guide & Feedback) -->
+            <div class="grid grid-cols-2 gap-2">
+                <button @click="isHelpOpen = true" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+                    <span>📖</span> Guide
+                </button>
+                <button @click="isFeedbackOpen = true" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+                    <span>💡</span> Feedback
+                </button>
+            </div>
         </div>
 
         <!-- Right Column: Summary & Balances -->
@@ -151,6 +164,36 @@
 
     </main>
 
+    <!-- Guide Modal -->
+    <div x-show="isHelpOpen" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2"><span>📖</span> How to Use FairShare</h3>
+                <button @click="isHelpOpen = false" class="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-slate-600 font-medium">
+                <li>Add your trip members in the <span class="text-teal-700 font-semibold">Crew</span> section.</li>
+                <li>Log group expenses with descriptions, amounts, and respective currencies.</li>
+                <li>Select your desired target currency under <span class="text-teal-700 font-semibold">Fair Settlement Overview</span>.</li>
+                <li>Tap <span class="text-teal-700 font-semibold">Share Report on WhatsApp</span> to send clear balances instantly!</li>
+            </ol>
+            <button @click="isHelpOpen = false" class="w-full bg-teal-600 text-white py-2 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">Got it</button>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div x-show="isFeedbackOpen" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2"><span>💡</span> Send Feedback / Suggestion</h3>
+                <button @click="isFeedbackOpen = false" class="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <p class="text-xs text-slate-500">Have an idea or found a bug? Let the creator know!</p>
+            <textarea x-model="feedbackText" rows="4" placeholder="Type your suggestion here..." class="w-full p-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+            <button @click="sendFeedback" class="w-full bg-teal-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-700 transition">Submit Feedback</button>
+        </div>
+    </div>
+
     <!-- Footer Signature -->
     <footer class="mt-auto py-6 text-center text-xs text-slate-400 border-t border-slate-100 bg-white w-full">
         <p>© 2026 Ansh Raghav (MOHITANSH). All Rights Reserved.</p>
@@ -167,6 +210,9 @@
                 baseCurrency: localStorage.getItem('fs_baseCurr') || 'USD',
                 newMember: '',
                 expense: { title: '', amount: '', currency: 'USD', paidBy: '' },
+                isHelpOpen: false,
+                isFeedbackOpen: false,
+                feedbackText: '',
                 
                 init() {
                     this.$watch('members', val => localStorage.setItem('fs_members', JSON.stringify(val)));
@@ -205,7 +251,6 @@
                     this.expenses.splice(index, 1);
                 },
 
-                // Base conversion rates relative to USD
                 get conversionRates() {
                     return { USD: 1, EUR: 0.92, INR: 83.5, GBP: 0.79, JPY: 155.0 };
                 },
@@ -218,7 +263,6 @@
 
                     let ratesToUSD = { USD: 1, EUR: 1.08, INR: 0.012, GBP: 1.27, JPY: 0.0065 };
 
-                    // Calculate balances in USD standard base
                     this.expenses.forEach(item => {
                         let rate = ratesToUSD[item.currency] || 1;
                         let amountInUSD = item.amount * rate;
@@ -233,7 +277,6 @@
                         });
                     });
 
-                    // Convert USD balances to user's selected base currency
                     let targetRateFromUSD = this.conversionRates[this.baseCurrency] || 1;
 
                     let debtors = [];
@@ -284,12 +327,24 @@
                     text += `\n_Generated via FairShare PWA_`;
                     let encoded = encodeURIComponent(text);
                     window.open(`https://wa.me/?text=${encoded}`, '_blank');
+                },
+
+                sendFeedback() {
+                    if (!this.feedbackText.trim()) {
+                        alert("Please write something before submitting.");
+                        return;
+                    }
+                    let mailtoLink = `mailto:anshraghav990@gmail.com?subject=FairShare Feedback&body=${encodeURIComponent(this.feedbackText)}`;
+                    window.location.href = mailtoLink;
+                    this.feedbackText = '';
+                    this.isFeedbackOpen = false;
                 }
             }
         }
     </script>
-        <script>
-        // Register Service Worker for PWA Installation
+
+    <!-- Register Service Worker for PWA Installation -->
+    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
