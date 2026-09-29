@@ -16,7 +16,7 @@
 
 ## 💡 What Makes FairShare Different?
 
-While traditional expense trackers rely on heavy databases, forced signups, and single-currency limitations[span_1](start_span)[span_1](end_span), **FairShare** introduces a sleek, privacy-focused architecture built for speed and global utility:
+While traditional expense trackers rely on heavy databases, forced signups, and single-currency limitations, **FairShare** introduces a sleek, privacy-focused architecture built for speed and global utility:
 
 * **🌐 Cross-Border Multi-Currency Engine:** Log expenses in USD, EUR, INR, GBP, or JPY. The engine instantly normalizes values and lets you view clear settlements in any target currency of your choice.
 * **💬 One-Click WhatsApp Export:** No need to manually copy-paste or calculate balances. Generate a clean, formatted breakdown and send it directly to your group on WhatsApp with a single tap.
